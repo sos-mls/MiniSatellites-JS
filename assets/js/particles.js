@@ -22,7 +22,7 @@ function init() {
     };
     group = new THREE.Group();
     scene.add( group );
-    for ( var i = 0; i < 1000; i++ ) {
+    for ( var i = 0; i < items.length; i++ ) {
         var material = new THREE.SpriteCanvasMaterial( {
             color: Math.random() * 0x808008 + 0x808080,
             program: program
@@ -33,7 +33,7 @@ function init() {
         particle.position.z = Math.random() * 2000 - 1000;
         particle.scale.x = particle.scale.y = Math.random() * 20 + 10;
         group.add( particle );
-        particles.push(particle);
+        items[i].particle = particle;
     }
     renderer = new THREE.CanvasRenderer();
     renderer.setPixelRatio( window.devicePixelRatio );
@@ -84,6 +84,11 @@ function onDocumentTouchMove( event ) {
     }
 }
 
+/**
+ * Detects when a particle has been clicked
+ * @param  {[type]} e [description]
+ * @return {[type]}   [description]
+ */
 function onMouseDown(e) {
     var vectorMouse = new THREE.Vector3( //vector from camera to mouse
         -(window.innerWidth/2-e.clientX)*2/window.innerWidth,
@@ -93,16 +98,16 @@ function onMouseDown(e) {
     vectorMouse.normalize();        
 
     var vectorObject = new THREE.Vector3(); //vector from camera to object
-    for (var i = 0; i < particles.length; i ++) {
-        vectorObject.set(particles[i].position.x - camera.position.x,
-                         particles[i].position.y - camera.position.y,
-                         particles[i].position.z - camera.position.z);
+    for (var i = 0; i < items.length; i ++) {
+        var particle = items[i].particle
+        vectorObject.set(particle.position.x - camera.position.x,
+                         particle.position.y - camera.position.y,
+                         particle.position.z - camera.position.z);
         vectorObject.normalize();
-        if (vectorMouse.angleTo(vectorObject)*180/Math.PI < 1) {
-            //mouse's position is near object's position
-            scene.position.x = particles[i].position.x;
-            scene.position.y = particles[i].position.y;
-            scene.position.z = particles[i].position.z;
+        if (vectorMouse.angleTo(vectorObject)*180/Math.PI < 6) {
+            console.log(items[i]);
+            mouseY = 0;
+            mouseX = 0;
         }
     }
     
