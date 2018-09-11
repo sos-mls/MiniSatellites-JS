@@ -1,87 +1,59 @@
 var container;
-var camera, scene, renderer, group, particle;
-var isMouseDown;
+var camera, scene, renderer, group, particle, raycaster, mouse, INTERSECTED;
 var particles = [];
 var mouseX = 0, mouseY = 0;
 var windowHalfX = window.innerWidth / 2;
 var windowHalfY = window.innerHeight / 2;
+var PI2 = Math.PI * 2;
 init();
 animate();
 
 function init() {
     container = document.createElement( 'div' );
     document.body.appendChild( container );
-    camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 3000 );
-    camera.position.z = 1000;
+    // SCENE
     scene = new THREE.Scene();
-    var PI2 = Math.PI * 2;
-    var program = function ( context ) {
-        context.beginPath();
-        context.arc( 0, 0, 0.5, 0, PI2, true );
-        context.fill();
-    };
-    group = new THREE.Group();
-    scene.add( group );
+    // CAMERA
+    var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+    var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
+    camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+    scene.add(camera);
+    camera.position.set(0,0,400);
+    camera.lookAt(scene.position);  
+
+    renderer = new THREE.CanvasRenderer(); 
+    renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+    container.appendChild( renderer.domElement );
+    // EVENTS
+    THREEx.WindowResize(renderer, camera);
+    // CONTROLS
+    controls = new THREE.OrbitControls( camera, renderer.domElement );
+    // Group
+    group = new THREE.Object3D();
     for ( var i = 0; i < items.length; i++ ) {
-        var material = new THREE.SpriteCanvasMaterial( {
+        var geometry =new THREE.SphereGeometry( 10, 10, 10 );
+        geometry.mergeVertices()
+        var material = new THREE.MeshBasicMaterial({
             color: Math.random() * 0x808008 + 0x808080,
-            program: program
-        } );
-        particle = new THREE.Sprite( material );
+        });
+        var particle = new THREE.Mesh(geometry, material);
         particle.position.x = Math.random() * 2000 - 1000;
         particle.position.y = Math.random() * 2000 - 1000;
         particle.position.z = Math.random() * 2000 - 1000;
-        particle.scale.x = particle.scale.y = Math.random() * 20 + 10;
+        particle.rotation.y = Math.random() * 2 * Math.PI;
+        particle.scale.x = particle.scale.y = particle.scale.z = Math.random() * 12 + 5;
         group.add( particle );
-        items[i].particle = particle;
+        particle.userData = items[i];
     }
-    renderer = new THREE.CanvasRenderer();
-    renderer.setPixelRatio( window.devicePixelRatio );
-    renderer.setSize( window.innerWidth, window.innerHeight );
-    container.appendChild( renderer.domElement );
-    document.addEventListener( 'mouseup', function() { 
-        isMouseDown=false; 
+    scene.add( group );
 
-    }, false );
-    document.addEventListener( 'mousedown', function() { isMouseDown=true; }, false );
-    document.addEventListener( 'mousemove', onDocumentMouseMove, false );
-    document.addEventListener( 'touchstart', onDocumentTouchStart, false );
-    document.addEventListener( 'touchmove', onDocumentTouchMove, false );
-    document.addEventListener('mousedown', onMouseDown, false);
-    //
-    window.addEventListener( 'resize', onWindowResize, false );
-}
+    // RAYCASTING
+    raycaster = new THREE.Raycaster();
+    mouse = new THREE.Vector2();
 
-function onWindowResize() {
-    windowHalfX = window.innerWidth / 2;
-    windowHalfY = window.innerHeight / 2;
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize( window.innerWidth, window.innerHeight );
-}
-
-//
-function onDocumentMouseMove( event ) {
-    if (isMouseDown === true) {
-        mouseX = event.clientX - windowHalfX;
-        mouseY = event.clientY - windowHalfY;
-    }
-}
-
-function onDocumentTouchStart( event ) {
-    if ( event.touches.length === 1 ) {
-        event.preventDefault();
-        mouseX = event.touches[ 0 ].pageX - windowHalfX;
-        mouseY = event.touches[ 0 ].pageY - windowHalfY;
-    }
-}
-
-function onDocumentTouchMove( event ) {
-    if ( event.touches.length === 1 ) {
-        event.preventDefault();
-        mouseX = event.touches[ 0 ].pageX - windowHalfX;
-        mouseY = event.touches[ 0 ].pageY - windowHalfY;
-    }
+    // Event Listeners
+    document.addEventListener('mousemove', onMouseMove, false);
+    document.addEventListener('mousedown', onDocumentMouseDown, false);
 }
 
 /**
@@ -89,41 +61,44 @@ function onDocumentTouchMove( event ) {
  * @param  {[type]} e [description]
  * @return {[type]}   [description]
  */
-function onMouseDown(e) {
-    var vectorMouse = new THREE.Vector3( //vector from camera to mouse
-        -(window.innerWidth/2-e.clientX)*2/window.innerWidth,
-        (window.innerHeight/2-e.clientY)*2/window.innerHeight,
-        -1/Math.tan(22.5*Math.PI/180)); //22.5 is half of camera frustum angle 45 degree
-    vectorMouse.applyQuaternion(camera.quaternion);
-    vectorMouse.normalize();        
+function onMouseMove(e) {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+}
 
-    var vectorObject = new THREE.Vector3(); //vector from camera to object
-    for (var i = 0; i < items.length; i ++) {
-        var particle = items[i].particle
-        vectorObject.set(particle.position.x - camera.position.x,
-                         particle.position.y - camera.position.y,
-                         particle.position.z - camera.position.z);
-        vectorObject.normalize();
-        if (vectorMouse.angleTo(vectorObject)*180/Math.PI < 6) {
-            console.log(items[i]);
-            mouseY = 0;
-            mouseX = 0;
-        }
+function onDocumentMouseDown(event) {
+    event.preventDefault();
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+    var intersects = raycaster.intersectObjects(group.children);
+    if (intersects.length > 0) {
+        //get a link from the userData object
+        console.log(intersects[0].object.userData);
     }
-    
-}
+};
 
-//
 function animate() {
-    requestAnimationFrame( animate );
-    render();
-}
+    controls.update();
 
-function render() {
-    // camera.position.x += ( mouseX - camera.position.x ) * 0.05;
-    // camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
-    camera.lookAt( scene.position );
-    group.rotation.x += ( mouseY - camera.rotation.x ) * 0.00005;
-    group.rotation.y += ( - mouseX - camera.rotation.y ) * 0.00005;
+    //update raycaster with mouse movement  
+    raycaster.setFromCamera(mouse, camera);
+    // calculate objects intersecting the picking ray
+    var intersects = raycaster.intersectObjects(group.children);
+    //count and look after all objects in the diamonds group
+    if (intersects.length > 0) {
+        if (INTERSECTED != intersects[0].object) {
+            if (INTERSECTED) INTERSECTED.material.color.setHex(INTERSECTED.currentHex);
+            INTERSECTED = intersects[0].object;
+            INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
+            //setting up new material on hover
+            INTERSECTED.material.color.setHex(Math.random() * 0xff00000 - 0xff00000);
+        }
+    } else {
+        if (INTERSECTED) INTERSECTED.material.color.setHex(INTERSECTED.currentHex);
+        INTERSECTED = null;
+    }
+
+    requestAnimationFrame( animate );
     renderer.render( scene, camera );
 }
