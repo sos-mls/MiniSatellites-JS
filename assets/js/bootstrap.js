@@ -64,39 +64,71 @@ Bootstrap = (function() {
     function renderScene()
     {
         _group = new THREE.Object3D();
+        var particle = null;
         for ( var i = 0; i < _current_item.relations.length; i++ ) {
-            
-            _group.add( createParticle(
-                _current_item.relations[i],
-                Math.random() * 0x808008 + 0x808080
-            ) );
+            particle = createRandomParticle(_current_item.relations[i]);
+            _group.add( particle );
+            _group.add(createCircle( particle ));
         }
 
         // add current item to center
-        
-        var particle = createParticle(_current_item, 0xffff00);
-        particle.position.x = 0;
-        particle.position.y = 0;
-        particle.position.z = 0;
-        particle.rotation.y = Math.random() * 2 * Math.PI;
-        particle.scale.x = particle.scale.y = particle.scale.z = 20;
-        _group.add( particle );
+        _group.add( createParticle(_current_item, 0xffff00, { x: 0, y: 0, z: 0}, { x: 20, y: 20, z: 20}) );
 
         _scene.add( _group );
     }
 
-    function createParticle(item, color) {
+    function createCircle(particle) {
+        var radius = Math.sqrt(Math.pow(particle.position.x, 2) + Math.pow(particle.position.y, 2)),
+        segments = 64,
+        material = new THREE.LineBasicMaterial( { color: 0xffffff } ),
+        geometry = new THREE.CircleGeometry( radius, segments );
+
+        // Remove center vertex
+        geometry.vertices.shift();
+
+
+        // To get a closed circle use LineLoop instead (see also @jackrugile his comment):
+        var circle = new THREE.LineLoop( geometry, material );
+        console.log(particle.position);
+        console.log(radius)
+        return circle;
+    }
+
+    function createRandomParticle(item) {
+        var color = Math.random() * 0x808008 + 0x808080;
+        var position = {
+            x: Math.random() * 4000 - 500,
+            y: Math.random() * 4000 - 500,
+            z: 0,
+        };
+        var scaleSize = Math.random() * 12 + 5;
+        var scale = {
+            x: scaleSize,
+            y: scaleSize,
+            z: scaleSize,
+        };
+
+        return createParticle(
+            item,
+            Math.random() * 0x808008 + 0x808080,
+            position,
+            scale
+        );
+    }
+
+    function createParticle(item, color, position, scale) {
         var geometry =new THREE.SphereGeometry( 10, 10, 10 );
         geometry.mergeVertices();
         var material = new THREE.MeshBasicMaterial({
             color: color,
         });
         var particle = new THREE.Mesh(geometry, material);
-        particle.position.x = Math.random() * 4000 - 1000;
-        particle.position.y = Math.random() * 4000 - 1000;
-        particle.position.z = Math.random() * 4000 - 1000;
-        particle.rotation.y = Math.random() * 2 * Math.PI;
-        particle.scale.x = particle.scale.y = particle.scale.z = Math.random() * 12 + 5;
+        particle.position.x = position.x;
+        particle.position.y = position.y;
+        particle.position.z = position.z;
+        particle.scale.x = scale.x;
+        particle.scale.y = scale.y;
+        particle.scale.z = scale.z;
         particle.userData = {
             item: item,
             hoverColor: Math.random() * 0x808008 + 0x808080
@@ -122,7 +154,7 @@ Bootstrap = (function() {
         var intersects = _raycaster.intersectObjects(_group.children);
         //count and look after all objects in the diamonds _group
         if (intersects.length > 0) {
-            if (INTERSECTED != intersects[0].object) {
+            if (INTERSECTED != intersects[0].object && intersects[0].object.userData.item !== undefined) {
                 if (INTERSECTED) INTERSECTED.material.color.setHex(INTERSECTED.currentHex);
                 INTERSECTED = intersects[0].object;
                 INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
@@ -139,6 +171,10 @@ Bootstrap = (function() {
 
     function animate() {
         controls.update();
+
+        if (INTERSECTED === null) {
+            _group.rotation.z += 0.005;
+        }
 
         //update _raycaster with _mouse movement  
         handleMouseHover();
