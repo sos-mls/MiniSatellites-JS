@@ -1,9 +1,10 @@
 Bootstrap = (function() {
 
     function init() {
-        Galaxy.init(createContainer(), [
+        SolarSystem.init(createContainer(), [
             { 
                 id: 2,
+                importance: Math.random(),
                 scale: Math.random(),
                 onHover: function() {
                     document.getElementById('header').innerHTML = 'The Secret Life of Bees';
@@ -11,6 +12,7 @@ Bootstrap = (function() {
             },
             { 
                 id: 3,
+                importance: Math.random(),
                 scale: Math.random(),
                 onHover: function() {
                     document.getElementById('header').innerHTML = 'Das Buch der Bilder';
@@ -18,6 +20,7 @@ Bootstrap = (function() {
             },
             { 
                 id: 4,
+                importance: Math.random(),
                 scale: Math.random(),
                 onHover: function() {
                     document.getElementById('header').innerHTML = 'Das Knaben Wunderhorn';
@@ -25,6 +28,7 @@ Bootstrap = (function() {
             },
             { 
                 id: 5,
+                importance: Math.random(),
                 scale: Math.random(),
                 onHover: function() {
                     document.getElementById('header').innerHTML = 'Das Stunden-Buch';
@@ -32,6 +36,7 @@ Bootstrap = (function() {
             },
             { 
                 id: 6,
+                importance: Math.random(),
                 scale: Math.random(),
                 onHover: function() {
                     document.getElementById('header').innerHTML = 'Day by Day';
@@ -39,6 +44,7 @@ Bootstrap = (function() {
             },
             { 
                 id: 7,
+                importance: Math.random(),
                 scale: Math.random(),
                 onHover: function() {
                     document.getElementById('header').innerHTML = 'Death and Fame: Poems 1993–1997';
@@ -46,6 +52,7 @@ Bootstrap = (function() {
             },
             { 
                 id: 8,
+                importance: Math.random(),
                 scale: Math.random(),
                 onHover: function() {
                     document.getElementById('header').innerHTML = 'Dhanu Dnyaniyaachi';
@@ -65,7 +72,7 @@ Bootstrap = (function() {
     };
 })();
 
-Galaxy = (function() {
+SolarSystem = (function() {
     var _container, _planets, _camera, _scene, _renderer, _group, _revolving_planets, _raycaster, _mouse, INTERSECTED, SCREEN_WIDTH, SCREEN_HEIGHT, MAX_RADIUS;
     var MAX_SIZE = { x: 20, y: 20, z: 20};
 
@@ -111,7 +118,7 @@ Galaxy = (function() {
                 x: _planets[i].scale * MAX_SIZE.x,
                 y: _planets[i].scale * MAX_SIZE.y,
                 z: _planets[i].scale * MAX_SIZE.z,
-            });
+            }, _planets[i].importance);
             circle = Planet.createPath( planet );
             planet_group = new THREE.Object3D();
             planet_group.add( planet );
@@ -240,11 +247,11 @@ Planet = (function() {
         return path;
     }
 
-    function createRandom(item, scale) {
+    function createRandom(item, scale, importance) {
         var color = Math.random() * 0x808008 + 0x808080;
         var position = {
-            x: Math.random() * 4000 - 500,
-            y: Math.random() * 4000 - 500,
+            x: (importance * 4000) + 500,
+            y: (importance * 4000) + 500,
             z: 0,
         };
         var scaleSize = Math.random() * 12 + 5;
