@@ -1,5 +1,5 @@
 Bootstrap = (function() {
-    var _container, _camera, _scene, _renderer, _group, _revolving_planets, _raycaster, _mouse, INTERSECTED, SCREEN_WIDTH, SCREEN_HEIGHT;
+    var _container, _camera, _scene, _renderer, _group, _revolving_planets, _raycaster, _mouse, INTERSECTED, SCREEN_WIDTH, SCREEN_HEIGHT, MAX_RADIUS;
     var _current_item = GetItem(1);
     document.getElementById('header').innerHTML = _current_item.name;
 
@@ -61,12 +61,13 @@ Bootstrap = (function() {
     {
         _group = new THREE.Object3D();
         _revolving_planets = [];
-        var planet, planet_group;
+        var planet, circle, planet_group;
         for ( var i = 0; i < _current_item.relations.length; i++ ) {
             planet = createRandomParticle(_current_item.relations[i]);
+            circle = createCircle( planet );
             planet_group = new THREE.Object3D();
             planet_group.add( planet );
-            planet_group.add(createCircle( planet ));
+            planet_group.add( circle );
             _group.add(planet_group);
             _revolving_planets.push(planet_group);
         }
@@ -75,6 +76,8 @@ Bootstrap = (function() {
         _group.add( createParticle(_current_item, 0xffff00, { x: 0, y: 0, z: 0}, { x: 20, y: 20, z: 20}) );
 
         _scene.add( _group );
+
+        setupMaxRadius();
     }
 
     function createCircle(planet) {
@@ -89,8 +92,9 @@ Bootstrap = (function() {
 
         // To get a closed circle use LineLoop instead (see also @jackrugile his comment):
         var circle = new THREE.LineLoop( geometry, material );
-        console.log(planet.position);
-        console.log(radius)
+        circle.userData = {
+            radius: radius
+        };
         return circle;
     }
 
@@ -137,6 +141,17 @@ Bootstrap = (function() {
         return planet;
     }
 
+    function setupMaxRadius() {
+        MAX_RADIUS = 0;
+        for (var i = 0; i < _revolving_planets.length; i ++) {
+            if (MAX_RADIUS < _revolving_planets[i].children[1].userData.radius) {
+                MAX_RADIUS = _revolving_planets[i].children[1].userData.radius;
+            }
+        }
+
+        console.log(MAX_RADIUS);
+    }
+
     function setupRaycasting() {
         _raycaster = new THREE.Raycaster();
         _mouse = new THREE.Vector2();
@@ -151,7 +166,13 @@ Bootstrap = (function() {
     function handleMouseHover() {
         _raycaster.setFromCamera(_mouse, _camera);
         // calculate objects intersecting the picking ray
-        var intersects = _raycaster.intersectObjects(_group.children);
+        var intersects = [];
+        for (var i = 0; i < _revolving_planets.length; i ++) {
+            var intersections = _raycaster.intersectObjects(_revolving_planets[i].children);
+            for (var j = 0; j < intersections.length; j ++) {
+                intersects.push(intersections[j]);
+            }
+        }
         //count and look after all objects in the diamonds _group
         if (intersects.length > 0) {
             if (INTERSECTED != intersects[0].object && intersects[0].object.userData.item !== undefined) {
@@ -172,13 +193,17 @@ Bootstrap = (function() {
     function animate() {
         controls.update();
 
-        // if (INTERSECTED === null) {
-            for (var i = 0; i < _revolving_planets.length; i ++) {
-                if (_revolving_planets[i].children[1].geometry.boundingSphere !== null) {
-                    // console.log(_revolving_planets[i].children[1].geometry.boundingSphere.radius);
-                }
+        var speed;
+        for (var i = 0; i < _revolving_planets.length; i ++) {
+            if (INTERSECTED != null) {
+                console.log();
             }
-        // }
+            if (INTERSECTED == null
+                || INTERSECTED.userData.item.id !== _revolving_planets[i].children[0].userData.item.id) {
+                speed = ((MAX_RADIUS - _revolving_planets[i].children[1].userData.radius) / 90000) + 0.001;
+                _revolving_planets[i].rotation.z += speed;
+            }
+        }
 
         //update _raycaster with _mouse movement  
         handleMouseHover();
