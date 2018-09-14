@@ -1,26 +1,87 @@
 Bootstrap = (function() {
-    var _container, _camera, _scene, _renderer, _group, _revolving_planets, _raycaster, _mouse, INTERSECTED, SCREEN_WIDTH, SCREEN_HEIGHT, MAX_RADIUS;
-    var _current_item = GetItem(1);
-    document.getElementById('header').innerHTML = _current_item.name;
 
     function init() {
-        _container = createContainer();
+        Galaxy.init(createContainer(), [
+            { 
+                id: 2,
+                scale: Math.random(),
+                onHover: function() {
+                    document.getElementById('header').innerHTML = 'The Secret Life of Bees';
+                }
+            },
+            { 
+                id: 3,
+                scale: Math.random(),
+                onHover: function() {
+                    document.getElementById('header').innerHTML = 'Das Buch der Bilder';
+                }
+            },
+            { 
+                id: 4,
+                scale: Math.random(),
+                onHover: function() {
+                    document.getElementById('header').innerHTML = 'Das Knaben Wunderhorn';
+                }
+            },
+            { 
+                id: 5,
+                scale: Math.random(),
+                onHover: function() {
+                    document.getElementById('header').innerHTML = 'Das Stunden-Buch';
+                }
+            },
+            { 
+                id: 6,
+                scale: Math.random(),
+                onHover: function() {
+                    document.getElementById('header').innerHTML = 'Day by Day';
+                }
+            },
+            { 
+                id: 7,
+                scale: Math.random(),
+                onHover: function() {
+                    document.getElementById('header').innerHTML = 'Death and Fame: Poems 1993–1997';
+                }
+            },
+            { 
+                id: 8,
+                scale: Math.random(),
+                onHover: function() {
+                    document.getElementById('header').innerHTML = 'Dhanu Dnyaniyaachi';
+                }
+            }
+        ])
+    }
+
+    function createContainer() {
+        var container = document.createElement( 'div' );
+        document.body.appendChild( container );
+        return container;
+    }
+
+    return {
+        init: init
+    };
+})();
+
+Galaxy = (function() {
+    var _container, _planets, _camera, _scene, _renderer, _group, _revolving_planets, _raycaster, _mouse, INTERSECTED, SCREEN_WIDTH, SCREEN_HEIGHT, MAX_RADIUS;
+    var MAX_SIZE = { x: 20, y: 20, z: 20};
+
+    function init(container, planets) {
+        _container = container;
+        _planets = planets;
         _scene = new THREE.Scene();
         _camera = createCamera(_scene);
         _renderer = createRenderer(_container);
         THREEx.WindowResize(_renderer, _camera);
         controls = new THREE.OrbitControls( _camera, _renderer.domElement );
 
-        setupGroup();
+        renderScene();
         setupRaycasting();
 
         animate();
-    }  
-
-    function createContainer() {
-        var container = document.createElement( 'div' );
-        document.body.appendChild( container );
-        return container;
     }
 
     function createCamera(_scene) {
@@ -40,31 +101,18 @@ Bootstrap = (function() {
         return renderer;
     }
 
-    function setupGroup() {
-        renderScene();
-
-        // add event listener for handling click events on the planet
-        document.addEventListener('mouseup', function(event) {
-            event.preventDefault();
-            if (INTERSECTED !== null) {
-                //get a link from the userData object
-                console.log(INTERSECTED.userData.item);
-                _current_item = GetItem(INTERSECTED.userData.item.id);
-                document.getElementById('header').innerHTML = _current_item.name;
-                _scene.remove(_group);
-                renderScene();
-            }
-        }, false);
-    }
-
     function renderScene()
     {
         _group = new THREE.Object3D();
         _revolving_planets = [];
         var planet, circle, planet_group;
-        for ( var i = 0; i < _current_item.relations.length; i++ ) {
-            planet = createRandomParticle(_current_item.relations[i]);
-            circle = createCircle( planet );
+        for ( var i = 0; i < _planets.length; i++ ) {
+            planet = Planet.createRandom(_planets[i], {
+                x: _planets[i].scale * MAX_SIZE.x,
+                y: _planets[i].scale * MAX_SIZE.y,
+                z: _planets[i].scale * MAX_SIZE.z,
+            });
+            circle = Planet.createPath( planet );
             planet_group = new THREE.Object3D();
             planet_group.add( planet );
             planet_group.add( circle );
@@ -73,83 +121,10 @@ Bootstrap = (function() {
         }
 
         // add current item to center
-        _group.add( createParticle(_current_item, 0xffff00, { x: 0, y: 0, z: 0}, { x: 20, y: 20, z: 20}) );
+        _group.add( Planet.create({}, 0xffff00, { x: 0, y: 0, z: 0}, MAX_SIZE) );
 
         _scene.add( _group );
-
-        setupMaxRadius();
-    }
-
-    function createCircle(planet) {
-        var radius = Math.sqrt(Math.pow(planet.position.x, 2) + Math.pow(planet.position.y, 2)),
-        segments = 64,
-        material = new THREE.LineBasicMaterial( { color: 0xffffff } ),
-        geometry = new THREE.CircleGeometry( radius, segments );
-
-        // Remove center vertex
-        geometry.vertices.shift();
-
-
-        // To get a closed circle use LineLoop instead (see also @jackrugile his comment):
-        var circle = new THREE.LineLoop( geometry, material );
-        circle.userData = {
-            radius: radius
-        };
-        return circle;
-    }
-
-    function createRandomParticle(item) {
-        var color = Math.random() * 0x808008 + 0x808080;
-        var position = {
-            x: Math.random() * 4000 - 500,
-            y: Math.random() * 4000 - 500,
-            z: 0,
-        };
-        var scaleSize = Math.random() * 12 + 5;
-        var scale = {
-            x: scaleSize,
-            y: scaleSize,
-            z: scaleSize,
-        };
-
-        return createParticle(
-            item,
-            Math.random() * 0x808008 + 0x808080,
-            position,
-            scale
-        );
-    }
-
-    function createParticle(item, color, position, scale) {
-        var geometry =new THREE.SphereGeometry( 10, 10, 10 );
-        geometry.mergeVertices();
-        var material = new THREE.MeshBasicMaterial({
-            color: color,
-        });
-        var planet = new THREE.Mesh(geometry, material);
-        planet.position.x = position.x;
-        planet.position.y = position.y;
-        planet.position.z = position.z;
-        planet.scale.x = scale.x;
-        planet.scale.y = scale.y;
-        planet.scale.z = scale.z;
-        planet.userData = {
-            item: item,
-            hoverColor: Math.random() * 0x808008 + 0x808080
-        };
-
-        return planet;
-    }
-
-    function setupMaxRadius() {
-        MAX_RADIUS = 0;
-        for (var i = 0; i < _revolving_planets.length; i ++) {
-            if (MAX_RADIUS < _revolving_planets[i].children[1].userData.radius) {
-                MAX_RADIUS = _revolving_planets[i].children[1].userData.radius;
-            }
-        }
-
-        console.log(MAX_RADIUS);
+        MAX_RADIUS = undefined;
     }
 
     function setupRaycasting() {
@@ -181,30 +156,17 @@ Bootstrap = (function() {
                 INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
                 //setting up new material on hover
                 INTERSECTED.material.color.setHex(INTERSECTED.userData.hoverColor);
-                document.getElementById('header').innerHTML = INTERSECTED.userData.item.name;
+                INTERSECTED.userData.item.onHover();
             }
         } else {
             if (INTERSECTED) INTERSECTED.material.color.setHex(INTERSECTED.currentHex);
             INTERSECTED = null;
-            document.getElementById('header').innerHTML = _current_item.name;
         }
     }
 
     function animate() {
         controls.update();
-
-        var speed;
-        for (var i = 0; i < _revolving_planets.length; i ++) {
-            if (INTERSECTED != null) {
-                console.log();
-            }
-            if (INTERSECTED == null
-                || INTERSECTED.userData.item.id !== _revolving_planets[i].children[0].userData.item.id) {
-                speed = ((MAX_RADIUS - _revolving_planets[i].children[1].userData.radius) / 90000) + 0.001;
-                _revolving_planets[i].rotation.z += speed;
-            }
-        }
-
+        animatePlanets();
         //update _raycaster with _mouse movement  
         handleMouseHover();
 
@@ -212,10 +174,114 @@ Bootstrap = (function() {
         _renderer.render( _scene, _camera );
     }
 
+    /**
+     * Updates the speed of the planets if they are not being hovered on.
+     */
+    function animatePlanets() {
+        var speed;
+        for (var i = 0; i < _revolving_planets.length; i ++) {
+            if (INTERSECTED == null
+                || INTERSECTED.userData.item.id !== _revolving_planets[i].children[0].userData.item.id) {
+                _revolving_planets[i].rotation.z += calculatePlanetSpeed(_revolving_planets[i].children[1].userData.radius);
+            }
+        }
+    }
+
+    /**
+     * Calculates the planets speed by the current radius of the planet around the center.
+     * 
+     * @param  {float} radius The radius of the planet.
+     * @return {float}        The speed of the planet
+     */
+    function calculatePlanetSpeed(radius) {
+        if (MAX_RADIUS == undefined)
+            MAX_RADIUS = calculateMaxRadius();
+        return ((MAX_RADIUS - radius) / 90000) + 0.001;
+    }
+
+    /**
+     * Calculates the current max radius of the revolving planets.
+     * 
+     * @return {float} The max radius.
+     */
+    function calculateMaxRadius() {
+        var maxRadius = 0;
+        for (var i = 0; i < _revolving_planets.length; i ++) {
+            if (maxRadius < _revolving_planets[i].children[1].userData.radius) {
+                maxRadius = _revolving_planets[i].children[1].userData.radius;
+            }
+        }
+
+        return maxRadius;
+    }
+
     return {
-        init: init,
-        animate: animate
-    };
-})();
+        init: init
+    }
+})()
+
+Planet = (function() {
+
+    function createPath(planet) {
+        var radius = Math.sqrt(Math.pow(planet.position.x, 2) + Math.pow(planet.position.y, 2)),
+        segments = 64,
+        material = new THREE.LineBasicMaterial( { color: 0xffffff } ),
+        geometry = new THREE.CircleGeometry( radius, segments );
+
+        // Remove center vertex
+        geometry.vertices.shift();
+
+
+        // To get a closed path use LineLoop instead (see also @jackrugile his comment):
+        var path = new THREE.LineLoop( geometry, material );
+        path.userData = {
+            radius: radius
+        };
+        return path;
+    }
+
+    function createRandom(item, scale) {
+        var color = Math.random() * 0x808008 + 0x808080;
+        var position = {
+            x: Math.random() * 4000 - 500,
+            y: Math.random() * 4000 - 500,
+            z: 0,
+        };
+        var scaleSize = Math.random() * 12 + 5;
+        return create(
+            item,
+            Math.random() * 0x808008 + 0x808080,
+            position,
+            scale
+        );
+    }
+
+    function create(item, color, position, scale) {
+        var geometry =new THREE.SphereGeometry( 10, 10, 10 );
+        geometry.mergeVertices();
+        var material = new THREE.MeshBasicMaterial({
+            color: color,
+        });
+        var planet = new THREE.Mesh(geometry, material);
+        planet.position.x = position.x;
+        planet.position.y = position.y;
+        planet.position.z = position.z;
+        planet.scale.x = scale.x;
+        planet.scale.y = scale.y;
+        planet.scale.z = scale.z;
+        planet.userData = {
+            item: item,
+            hoverColor: Math.random() * 0x808008 + 0x808080
+        };
+
+        return planet;
+    }
+
+    return {
+        create: create,
+        createPath: createPath,
+        createRandom: createRandom
+    }
+})()
 
 Bootstrap.init();
