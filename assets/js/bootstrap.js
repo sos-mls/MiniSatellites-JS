@@ -75,6 +75,8 @@ Bootstrap = (function() {
 SolarSystem = (function() {
     var _container, _planets, _camera, _scene, _renderer, _group, _revolving_planets, _raycaster, _mouse, INTERSECTED, SCREEN_WIDTH, SCREEN_HEIGHT, MAX_RADIUS;
     var MAX_SIZE = { x: 20, y: 20, z: 20};
+    var MAX_RADIUS = 4000;
+    var MIN_RADIUS = 500;
 
     function init(container, planets) {
         _container = container;
@@ -114,11 +116,11 @@ SolarSystem = (function() {
         _revolving_planets = [];
         var planet, circle, planet_group;
         for ( var i = 0; i < _planets.length; i++ ) {
-            planet = Planet.createRandom(_planets[i], {
-                x: _planets[i].scale * MAX_SIZE.x,
-                y: _planets[i].scale * MAX_SIZE.y,
-                z: _planets[i].scale * MAX_SIZE.z,
-            }, _planets[i].importance);
+            planet = Planet.createRandom(
+                _planets[i], 
+                _planets[i].scale * MAX_SIZE.x, 
+                (_planets[i].importance * MAX_RADIUS) + MIN_RADIUS
+            );
             circle = Planet.createPath( planet );
             planet_group = new THREE.Object3D();
             planet_group.add( planet );
@@ -250,11 +252,15 @@ Planet = (function() {
     function createRandom(item, scale, importance) {
         var color = Math.random() * 0x808008 + 0x808080;
         var position = {
-            x: (importance * 4000) + 500,
-            y: (importance * 4000) + 500,
+            x: importance,
+            y: importance,
             z: 0,
         };
-        var scaleSize = Math.random() * 12 + 5;
+        var scale = {
+            x: scale,
+            y: scale,
+            z: scale,
+        };
         return create(
             item,
             Math.random() * 0x808008 + 0x808080,
