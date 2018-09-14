@@ -1,5 +1,5 @@
 Bootstrap = (function() {
-    var _container, _camera, _scene, _renderer, _group, _raycaster, _mouse, INTERSECTED, SCREEN_WIDTH, SCREEN_HEIGHT;
+    var _container, _camera, _scene, _renderer, _group, _revolving_planets, _raycaster, _mouse, INTERSECTED, SCREEN_WIDTH, SCREEN_HEIGHT;
     var _current_item = GetItem(1);
     document.getElementById('header').innerHTML = _current_item.name;
 
@@ -43,17 +43,13 @@ Bootstrap = (function() {
     function setupGroup() {
         renderScene();
 
-        // add event listener for handling click events on the particle
+        // add event listener for handling click events on the planet
         document.addEventListener('mouseup', function(event) {
             event.preventDefault();
-            _mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            _mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-            _raycaster.setFromCamera(_mouse, _camera);
-            var intersects = _raycaster.intersectObjects(_group.children);
-            if (intersects.length > 0) {
+            if (INTERSECTED !== null) {
                 //get a link from the userData object
-                console.log(intersects[0].object.userData.item);
-                _current_item = GetItem(intersects[0].object.userData.item.id);
+                console.log(INTERSECTED.userData.item);
+                _current_item = GetItem(INTERSECTED.userData.item.id);
                 document.getElementById('header').innerHTML = _current_item.name;
                 _scene.remove(_group);
                 renderScene();
@@ -64,11 +60,15 @@ Bootstrap = (function() {
     function renderScene()
     {
         _group = new THREE.Object3D();
-        var particle = null;
+        _revolving_planets = [];
+        var planet, planet_group;
         for ( var i = 0; i < _current_item.relations.length; i++ ) {
-            particle = createRandomParticle(_current_item.relations[i]);
-            _group.add( particle );
-            _group.add(createCircle( particle ));
+            planet = createRandomParticle(_current_item.relations[i]);
+            planet_group = new THREE.Object3D();
+            planet_group.add( planet );
+            planet_group.add(createCircle( planet ));
+            _group.add(planet_group);
+            _revolving_planets.push(planet_group);
         }
 
         // add current item to center
@@ -77,8 +77,8 @@ Bootstrap = (function() {
         _scene.add( _group );
     }
 
-    function createCircle(particle) {
-        var radius = Math.sqrt(Math.pow(particle.position.x, 2) + Math.pow(particle.position.y, 2)),
+    function createCircle(planet) {
+        var radius = Math.sqrt(Math.pow(planet.position.x, 2) + Math.pow(planet.position.y, 2)),
         segments = 64,
         material = new THREE.LineBasicMaterial( { color: 0xffffff } ),
         geometry = new THREE.CircleGeometry( radius, segments );
@@ -89,7 +89,7 @@ Bootstrap = (function() {
 
         // To get a closed circle use LineLoop instead (see also @jackrugile his comment):
         var circle = new THREE.LineLoop( geometry, material );
-        console.log(particle.position);
+        console.log(planet.position);
         console.log(radius)
         return circle;
     }
@@ -122,19 +122,19 @@ Bootstrap = (function() {
         var material = new THREE.MeshBasicMaterial({
             color: color,
         });
-        var particle = new THREE.Mesh(geometry, material);
-        particle.position.x = position.x;
-        particle.position.y = position.y;
-        particle.position.z = position.z;
-        particle.scale.x = scale.x;
-        particle.scale.y = scale.y;
-        particle.scale.z = scale.z;
-        particle.userData = {
+        var planet = new THREE.Mesh(geometry, material);
+        planet.position.x = position.x;
+        planet.position.y = position.y;
+        planet.position.z = position.z;
+        planet.scale.x = scale.x;
+        planet.scale.y = scale.y;
+        planet.scale.z = scale.z;
+        planet.userData = {
             item: item,
             hoverColor: Math.random() * 0x808008 + 0x808080
         };
 
-        return particle;
+        return planet;
     }
 
     function setupRaycasting() {
@@ -172,9 +172,13 @@ Bootstrap = (function() {
     function animate() {
         controls.update();
 
-        if (INTERSECTED === null) {
-            _group.rotation.z += 0.005;
-        }
+        // if (INTERSECTED === null) {
+            for (var i = 0; i < _revolving_planets.length; i ++) {
+                if (_revolving_planets[i].children[1].geometry.boundingSphere !== null) {
+                    // console.log(_revolving_planets[i].children[1].geometry.boundingSphere.radius);
+                }
+            }
+        // }
 
         //update _raycaster with _mouse movement  
         handleMouseHover();
