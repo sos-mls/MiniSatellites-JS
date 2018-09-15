@@ -6,10 +6,7 @@
   "scripts": {
     "webpack": "webpack",
     "build": "webpack --progress -p",
-    "build:dev": "webpack --progress -d",
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build:dev": "webpack --progress -d"
   },
   "repository": {
     "type": "git",
@@ -24,7 +21,7 @@
   "dependencies": {
     "es6-promise": "^4.0.5",
     "fuse-ci-dev": "^1.3.1",
-    "solarsystem-graph": "^1.0.2"
+    "solarsystem-graph": "^1.0.7"
   },
   "devDependencies": {
     "assets-webpack-plugin": "^3.5.1",
@@ -44,7 +41,6 @@
     "grunt-eslint": "^18.0.0",
     "install": "^0.10.2",
     "npm": "^5.5.1",
-    "redux-devtools": "^3.3.1",
     "webpack": "^2.2.0",
     "webpack-dev-server": "^2.2.0"
   }
